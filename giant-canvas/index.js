@@ -1,20 +1,42 @@
+/*
+* Author: 4bin
+* Email: huang4bin@gmail.com
+* Blog: http://4bin.cn
+* License: MIT
+*/
 
 var GiantCanvas = function () {
-	var nWidth = 0,
+	var // 导航器宽度
+		nWidth = 0,
+		// 画布宽度
 		cWidth = 0,
+		// 画布高度
 		cHeight = 0,
+		// 图片宽度
 		iWidth = 0,
+		// 图片高度
 		iHeight = 0,
+		// 画布element
 		canvas = null,
+		// 导航器element
 		navigator = null,
+		// 画布上下文
 		ctx = null,
+		// 导航器方框
 		rect = null,
+		// 图片拖拽至边缘的最小显示
 		appearSize = 100
-	var x = 0,
+	var // 图片在画布中的横坐标
+		x = 0,
+		// 图片在画布中的纵坐标
 	 	y = 0,
+	 	// 拖动过程中，鼠标前一次移动位置的横坐标
 	 	prevX = 0,
+	 	// 拖动过程中，鼠标前一次移动位置的纵坐标
 	 	prevY = 0,
+	 	// 缩放比例
 	 	scale = 1,
+	 	// 图片element
 	 	image = null
 
 	function initial (can, nav) {
@@ -34,7 +56,7 @@ var GiantCanvas = function () {
 		var oldImg = image                                                                                                                                                                                                                                                                                                           
 		image = new Image()
 		image.src = src 
-		
+	
 		image.addEventListener('load', function () {
 			iWidth = image.width
 			iHeight = image.height
@@ -51,6 +73,8 @@ var GiantCanvas = function () {
 
 	function update () {
 		ctx.clearRect(0, 0, cWidth, cHeight)
+
+		// 将导航器方框区域绘制到画布
 		ctx.drawImage(image, -x/scale, -y/scale, cWidth/scale, cHeight/scale, 0, 0, cWidth, cHeight)	
 		rect.style.left = -x * nWidth / iWidth + 'px'
 		rect.style.top = -y * nWidth / iWidth + 'px'
@@ -86,6 +110,7 @@ var GiantCanvas = function () {
 	}
 
 	function setXY (vx, vy) {
+		// 防止图片被拖出画布
 		if(vx < appearSize - iWidth) {
 			x = appearSize - iWidth
 		} else if (vx > cWidth - appearSize) {
@@ -109,6 +134,7 @@ var GiantCanvas = function () {
 	}
 }
 
+/* 计算鼠标事件相对容器的位置 */
 var calculateChange = function (e, container, skip) {
   !skip && e.preventDefault()
   const containerWidth = container.clientWidth
@@ -139,59 +165,10 @@ let gc = new GiantCanvas()
 gc.initial(document.querySelector('.canvas'), document.querySelector('.navigator'))
 gc.setImage('./ship.jpg')
 
+// 加载本地图片
 document.querySelector('.file').onchange = function (e) {
 	var file = this.files[0]
 	imgSrc = (window.URL || window.webkitURL).createObjectURL(file);
 	gc.setImage(imgSrc)
 }
 
-//render(currP.x, currP.y)
-
-/*function render(x, y) {
-	ctx.clearRect(0,0,width,height)
-	ctx.drawImage(img, x, y, width, height, 0, 0, width, height)
-}
-
-function handleDrag (e) {
-	var p = calculateChange(e, canvas)
-	var offsetX = p.x - prevP.x 
-	var offsetY = p.y - prevP.y
-	currP.x = currP.x - offsetX
-	currP.y = currP.y - offsetY
-	render(currP.x, currP.y)
-	prevP = p
-}
-
-function handleMouseDown (e) {
-	prevP = calculateChange(e, canvas)
-	window.addEventListener('mousemove', handleDrag)
-	window.addEventListener('mouseup', handleMouseUp)
-}
-
-function handleMouseUp (e) {
-	window.removeEventListener('mousemove', handleDrag)
-	window.removeEventListener('mousemove', handleMouseUp)
-}
-
-canvas.addEventListener('mousedown', handleMouseDown)
-
-
-
-
-function enhanceImage (img) {
-	this.x = 0
-	this.y = 0
-	this.Img = new Image() 
-	this.Img.src = img                                                                                                                               
-
-	document.querySelector('.navigator').appendChild(this.Img)
-}
-var i = new enhanceImage('./ship.jpg')
-
-function navigator (x, y, w, h) {
-	this.rectW = w
-	this.rectH = h 
-	this.x = x
-	this.y = y
-}
-*/

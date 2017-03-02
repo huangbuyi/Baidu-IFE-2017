@@ -74,7 +74,8 @@ var GiantCanvas = function () {
 	function update () {
 		ctx.clearRect(0, 0, cWidth, cHeight)
 
-		// 将导航器方框区域绘制到画布
+		// 将导航器方框区域绘制到画布。
+		// Debug：这里ie有个bug，第二个和第三个参数不能小于0
 		ctx.drawImage(image, -x/scale, -y/scale, cWidth/scale, cHeight/scale, 0, 0, cWidth, cHeight)	
 		rect.style.left = -x * nWidth / iWidth + 'px'
 		rect.style.top = -y * nWidth / iWidth + 'px'

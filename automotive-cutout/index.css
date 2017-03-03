@@ -1,0 +1,14 @@
+*{margin:0;padding:0;}
+.container {position: fixed;left:0;right:0;top:0;bottom:0;display:flex;justify-content:center;align-items:center;}
+.canvas {background:rgb(50,50,50);box-shadow: 0 1px 2px rgba(0,0,0,0.16),0 1px 2px rgba(0,0,0,0.23);cursor:move; }
+.navContainer {padding:6px;position:fixed;top:8px;right:8px;background:rgb(66,66,66);box-shadow:0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);}
+.navigator {position:relative;width:200px;overflow:hidden;z-index: 2;cursor:pointer;}
+.navWindow {box-sizing:border-box;position:absolute;border:1px solid rgb(236,12,12);z-index: 1;}
+.navigator img{width:100%;position:relative;display:block;z-index: 0;}
+.upload {position:fixed;left:8px;top:8px;background:rgb(66,66,66);box-shadow:0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);padding:6px;z-index: 2}
+.file {background: rgb(50,50,50);color: #fff;}
+.scalePanel {width:100%;height:24px;line-height:24px;font-size:14px;color:#fff;text-align:center;}
+.toolBar {position:fixed;left:0;top:56px;background:rgb(83,83,83);box-shadow:0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);}
+.tool,.tool-on{width:36px;height:36px;line-height: 36px;text-align: center;color:rgba(255,255,255,0.5);cursor:default;}
+.toolBar .tool:hover{background:rgb(66,66,66)}
+.toolBar .tool-on{background:rgb(50,50,50);color:rgba(255,255,255,1)}

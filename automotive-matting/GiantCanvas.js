@@ -4,7 +4,6 @@
 * Blog: http://4bin.cn
 * License: MIT
 */
-// todo：搞清楚组件的属性、状态、配置项，以及它们之间的关系。
 var GiantCanvas = function () {
 	var // 导航器宽度
 		nWidth = 0,
@@ -35,7 +34,9 @@ var GiantCanvas = function () {
 		// 最小缩放比例
 		minScale = 0.0008,
 		// 最大缩放比例
-		maxScale = 32
+		maxScale = 32,
+		// 画布点击函数
+		onClick = null
 	var // 图片在画布中的横坐标
 		x = 0,
 		// 图片在画布中的纵坐标
@@ -54,17 +55,22 @@ var GiantCanvas = function () {
 	 	bCtx = null
 
 	var features = {
+		// 开关拖动
 		dragOn: false,
-		cutoutOn: false
+		// 开关抠图
+		cutoutOn: false,
+		// 抠图容差
+		tolerance: 20
 	}
 
-	function initial (can, nav, panel) {
-		ctx = can.getContext('2d')
-		cWidth = can.clientWidth
-		cHeight = can.clientHeight
-		navigator = nav
-		scalePanel = panel
-		canvas = can
+	function initial (options) {
+		ctx = options.canvas.getContext('2d')
+		cWidth = options.canvas.clientWidth
+		cHeight = options.canvas.clientHeight
+		navigator = options.navigator
+		scalePanel = options.scalePanel
+		onClick = options.onClick || function () {}
+		canvas = options.canvas
 		rect = document.createElement('div')
 		rect.className = 'navWindow'
 		navigator.appendChild(rect)
@@ -101,9 +107,9 @@ var GiantCanvas = function () {
 		})
 	}
 
-	function setFeatures(f, bool) {
+	function setFeatures(f, value) {
 		// todo 验证输入
-		features[f] = !!bool
+		features[f] = value
 	}
 
 	function update () {
@@ -136,15 +142,32 @@ var GiantCanvas = function () {
 
 	function handleMouseDown (e) {
 		var prevP = calculateChange(e, canvas)
+		var ix = Math.floor((prevP.x - x)/scale)
+		var iy = Math.floor((prevP.y - y)/scale)
 		prevX = prevP.x 
 		prevY = prevP.y
 		
-		features.cutoutOn && cutout((prevP.x - x)/scale, (prevP.y - y)/scale)
+		features.cutoutOn && cutout(ix, iy)
 
 		if( features.dragOn ) {
 			window.addEventListener('mousemove', handleDrag)
 			window.addEventListener('mouseup', handleMouseUp)
 		}
+
+	
+		var colorData = bCtx.getImageData(ix,iy,1,1).data
+
+		// 输出画布点击位置的信息
+		onClick({
+			x: ix,
+			y: iy,
+			color: {
+				r: colorData[0],
+				g: colorData[1],
+				b: colorData[2],
+				a: Number((colorData[3] / 255).toFixed(2))
+			}
+		}, e)
 	}
 		
 
@@ -153,6 +176,7 @@ var GiantCanvas = function () {
 		window.removeEventListener('mousemove', handleMouseUp)
 	}
 
+	/* 导航器点击导航 */
 	function handleNavigatorClick (e) {
 		var p = calculateChange(e, navigator)
 		var tmpX = cWidth / 2 - iWidth * scale * p.x / nWidth
@@ -160,6 +184,7 @@ var GiantCanvas = function () {
 		setXY(tmpX, tmpY)
 	}
 
+	/* 滚动缩放 */
 	function handleMouseWheel (e) {
 		var wd = e.wheelDelta
 		var newScale = scale * (1 + (wd > 0 ? scaleStep : -scaleStep))
@@ -195,7 +220,7 @@ var GiantCanvas = function () {
 
 	/* 计算鼠标事件相对容器的位置 */
 	function calculateChange(e, container, skip) {
-	  !skip && e.preventDefault()
+	  //!skip && e.preventDefault()
 	  const containerWidth = container.clientWidth
 	  const containerHeight = container.clientHeight
 	  const x = typeof e.pageX === 'number' ? e.pageX : e.touches[0].pageX
@@ -221,12 +246,9 @@ var GiantCanvas = function () {
 	}
 
 	function cutout(ix, iy) {
-		var tolerance = 10
-		var imageData = bCtx.getImageData(ix,iy,50,50)
-		for(var i=0,len=imageData.data.length; i < len; i++) {
-			imageData.data[i] = 0
-		}
-		bCtx.putImageData(imageData,ix,iy)	
+		var imageData = bCtx.getImageData(0,0,iWidth,iHeight)
+		RGSA(imageData, [ix, iy], features.tolerance)
+		bCtx.putImageData(imageData,0,0)	
 		update()
 	}
 
@@ -235,6 +257,96 @@ var GiantCanvas = function () {
 		setImage: setImage,
 		setFeatures: setFeatures
 	}
+}
+
+/*var src = {
+	width: 4,
+	height: 2,
+	data: [0,0,0,0,0,0,0,0,0,0,0,0,200,200,200,1,200,200,200,0,200,200,200,1,200,200,200,1,200,200,200,1]
+}
+console.log(rgsa(src, [0,0], 10))
+
+console.log(src)*/
+
+/**区域自增长分割算法
+ * @src {[image data]}
+ * @seed {[seed point]}
+ * @distance {[color space distance]}
+ */
+function RGSA (src, seed, distance) {
+	var width = src.width,
+		height = src.height,
+		srcData = src.data,
+		getValue = function(x, y) {
+			var i = 4 * (y * width + x)
+			return {
+				r: srcData[i],
+				g: srcData[i+1],
+				b: srcData[i+2],
+				a: srcData[i+3]
+			}
+		},
+		standarValue = getValue(seed[0], seed[1]) 
+		isTolerance = function(x, y) {
+			var targetValue = getValue(x, y)
+			return calcColorDistance(standarValue.r, standarValue.g, standarValue.b, targetValue.r, targetValue.g, targetValue.b) <= distance
+		},
+		// 种子点
+		seeds = [],
+		// 标记
+		marked = Array(height).fill([])
+
+	for(var i = 0; i < height; i++) {
+		marked[i] = Array(width).fill(0)
+	}
+	
+	seeds.push(seed)
+
+	// 周围八点
+	const surround = [1,0,1,1,0,1,-1,1,-1,0,-1,-1,0,-1,1,-1]
+
+	while (seeds.length > 0) {
+		var seed = seeds.pop()
+		for(var i = 0; i < 8; i++) {
+			var tmpX = seed[0] + surround[2*i]
+			var tmpY = seed[1] + surround[2*i + 1]
+
+			if (tmpX < 0 || tmpY < 0 || tmpX >= width || tmpY >= height ) {
+
+			} else if (marked[tmpY][tmpX] == 0 ) {
+				
+				if (isTolerance(tmpX, tmpY)) {
+					// 符合容差的点标记为2
+					marked[tmpY][tmpX] = 2
+					seeds.push([tmpX, tmpY])
+				} else {
+					// 不符合容差，但遍历过的点标记为1
+					marked[tmpY][tmpX] = 1
+				}
+			}
+		}
+	}
+
+	// 将标记的像素设为白色
+	for (var i = 0; i < height; i++ ) {
+		for(var j = 0; j < width; j++) {
+			if(marked[i][j] == 2){
+				var tmp = 4 * (i * width + j)
+				src.data[tmp] = 255
+				src.data[tmp+1] = 255
+				src.data[tmp+2] = 255
+			}
+		}
+	}
+	return marked
+}
+
+/* 计算rgb色彩空间距离 */
+function calcColorDistance (r1,g1,b1,r2,g2,b2) {
+	var dr = r2 - r1,
+		dg = g2 - g1,
+		db = b2 - b1
+	return Math.sqrt(dr * dr + dg * dg + db * db)
 }
 
 
